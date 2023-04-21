@@ -3,6 +3,7 @@
 .clang-tidy
 .clang-format
 */run
+CMakeLists.txt
 
 # Prerequisites
 *.d
