@@ -2,7 +2,7 @@
 .idea
 .clang-tidy
 .clang-format
-run
+*/run
 
 # Prerequisites
 *.d

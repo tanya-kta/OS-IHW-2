@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
-#include "info.h"
+#include "../info.h"
 
 void child(char *mem_name, int *decoder, sem_t *ch_sem, sem_t *pr_sem, int id, int total) {
     int shmid;
@@ -44,7 +44,8 @@ void child(char *mem_name, int *decoder, sem_t *ch_sem, sem_t *pr_sem, int id, i
     sem_post(pr_sem);
 }
 
-void parent(char *mem_name, char *input_file, int proc_num, sem_t **pr_sems, sem_t **ch_sems) {
+void parent(char *mem_name, char *input_file, char *output_file,
+            int proc_num, sem_t **pr_sems, sem_t **ch_sems) {
     char decoded[100010];
     int ind_dec = 0;
 
@@ -109,7 +110,12 @@ void parent(char *mem_name, char *input_file, int proc_num, sem_t **pr_sems, sem
     }
 
     decoded[ind_dec] = '\0';
-    printf("%s", decoded);
+    printf("%s\n", decoded);
+
+    close(file);
+    file = open(output_file, O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU);
+    write(file, decoded, sizeof(char) * ind_dec);
+    close(file);
 
     close(shmid);
     if (shm_unlink(mem_name) == -1) {
@@ -142,7 +148,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    parent(mem_name, argv[2], pros_num, parent_semaphores, child_semaphores);
+    parent(mem_name, argv[2], argv[3], pros_num, parent_semaphores, child_semaphores);
     for (int i = 0; i < pros_num; ++i) {
         if (sem_unlink(getChildSemaphoreName(i)) == -1) {
             perror("sem_unlink");
