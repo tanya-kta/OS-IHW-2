@@ -73,3 +73,19 @@ int readInt(int file, int *p) {
     sscanf(line, "%d", p);
     return 1;
 }
+
+char *getChildSemaphoreName(int index) {
+    char digit = '0' + index;
+    char total[strlen(child_sem) + 2];
+    total[0] = '\0';
+    strcat(total, child_sem);
+    return strcat(total, &digit);
+}
+
+char *getParentSemaphoreName(int index) {
+    char digit = '0' + index;
+    char total[strlen(parent_sem) + 2];
+    total[0] = '\0';
+    strcat(total, parent_sem);
+    return strcat(total, &digit);
+}
