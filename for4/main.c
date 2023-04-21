@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include "../info.h"
 
-void child(char *mem_name, int *decoder, sem_t *ch_sem, sem_t *pr_sem, int id, int total) {
+void child(char *mem_name, int *decoder, sem_t *ch_sem, sem_t *pr_sem, int id, int pros_num) {
     int shmid;
 
     message_t *msg_p;  // адрес сообщения в разделяемой памяти
@@ -18,7 +18,7 @@ void child(char *mem_name, int *decoder, sem_t *ch_sem, sem_t *pr_sem, int id, i
         printf("Object in child id %d is open: name = %s, id = 0x%x\n", id, mem_name, shmid);
     }
     // получить доступ к памяти
-    msg_p = mmap(0, sizeof(message_t) * total, PROT_WRITE | PROT_READ, MAP_SHARED, shmid, 0);
+    msg_p = mmap(0, sizeof(message_t) * pros_num, PROT_WRITE | PROT_READ, MAP_SHARED, shmid, 0);
 
     char buffer[30];
 
@@ -45,7 +45,7 @@ void child(char *mem_name, int *decoder, sem_t *ch_sem, sem_t *pr_sem, int id, i
 }
 
 void parent(char *mem_name, char *input_file, char *output_file,
-            int proc_num, sem_t **pr_sems, sem_t **ch_sems) {
+            int pros_num, sem_t **pr_sems, sem_t **ch_sems) {
     char decoded[100010];
     int ind_dec = 0;
 
@@ -60,19 +60,19 @@ void parent(char *mem_name, char *input_file, char *output_file,
         printf("Object in parent is open: name = %s, id = 0x%x\n", mem_name, shmid);
     }
     // Задание размера объекта памяти
-    if (ftruncate(shmid, sizeof(message_t)) == -1) {
+    if (ftruncate(shmid, sizeof(message_t) * pros_num) == -1) {
         perror("ftruncate");
         sysErr("server: memory sizing error");
     } else {
-        printf("Memory size set and = %lu\n", sizeof(message_t));
+        printf("Memory size set and = %lu\n", sizeof(message_t) * pros_num);
     }
     // получить доступ к памяти
-    msg_p = mmap(0, sizeof(message_t), PROT_WRITE | PROT_READ, MAP_SHARED, shmid, 0);
-    msg_p->type = MSG_TYPE_EMPTY;
+    msg_p = mmap(0, sizeof(message_t) * pros_num, PROT_WRITE | PROT_READ, MAP_SHARED, shmid, 0);
+
     int status = 1;
     while (status == 1) {
         int num_of_running = 0;
-        for (int i = 0; i < proc_num; ++i, ++num_of_running) {
+        for (int i = 0; i < pros_num; ++i, ++num_of_running) {
             int size = 0;
             for (; size < 30; ++size) {
                 status = readInt(file, &msg_p[i].coded[size]);
@@ -99,11 +99,11 @@ void parent(char *mem_name, char *input_file, char *output_file,
         }
     }
 
-    for (int i = 0; i < proc_num; ++i) {
+    for (int i = 0; i < pros_num; ++i) {
         msg_p[i].type = MSG_TYPE_FINISH;
         sem_post(ch_sems[i]);
     }
-    for (int i = 0; i < proc_num; ++i) {
+    for (int i = 0; i < pros_num; ++i) {
         sem_wait(pr_sems[i]);
         sem_close(pr_sems[i]);
         sem_close(ch_sems[i]);
