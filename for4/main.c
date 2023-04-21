@@ -74,7 +74,7 @@ void parent(char *mem_name, char *input_file, char *output_file,
         int num_of_running = 0;
         for (int i = 0; i < pros_num; ++i, ++num_of_running) {
             int size = 0;
-            for (; size < 30; ++size) {
+            for (; size < MAX_INTS; ++size) {
                 status = readInt(file, &msg_p[i].coded[size]);
                 if (status == -1) {
                     break;

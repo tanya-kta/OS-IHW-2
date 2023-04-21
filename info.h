@@ -7,7 +7,6 @@
 #include <stdlib.h>
 
 // коды сообщений
-#define MSG_TYPE_EMPTY  0     // сообщение о завершении обмена при пустой строке
 #define MSG_TYPE_INT    1     // сообщение о передаче кодированных чисел
 #define MSG_TYPE_STRING 2     // сообщение о передаче декодированной строки
 #define MSG_TYPE_FINISH 3     // сообщение о том, что пора завершать обмен
@@ -20,9 +19,11 @@ const char *parent_sem = "/parent-semaphore";
 typedef struct {
     int type;
     int size;
+    sem_t child_sem;
+    sem_t parent_sem;
     union {
-        char uncoded[120];
-        int coded[30];
+        char uncoded[MAX_INTS * sizeof(int)];
+        int coded[MAX_INTS];
     };
 } message_t;
 
