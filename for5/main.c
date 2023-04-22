@@ -7,10 +7,7 @@
 #include <fcntl.h>
 #include "../info.h"
 
-void child(char *mem_name, int *decoder, int id, int pros_num) {
-    int shmid;
-
-    message_t *msg_p;  // адрес сообщения в разделяемой памяти
+void child(int *decoder, int id) {
     if ((shmid = shm_open(mem_name, O_CREAT | O_RDWR, S_IRWXU)) == -1) {
         perror("shm_open");
         sysErr("client: object is already open");
@@ -44,7 +41,7 @@ void child(char *mem_name, int *decoder, int id, int pros_num) {
     sem_post(&msg_p[id].parent_sem);
 }
 
-void parent(message_t *msg_p, char *input_file, char *output_file, int pros_num) {
+void parent(char *input_file, char *output_file) {
     char decoded[100010];
     int ind_dec = 0;
 
@@ -97,16 +94,32 @@ void parent(message_t *msg_p, char *input_file, char *output_file, int pros_num)
     close(file);
 }
 
+void parentHandleCtrlC(int nsig){
+    printf("Receive signal %d, CTRL-C pressed\n", nsig);
+
+    for (int i = 0; msg_p != NULL && i < pros_num; ++i) {
+        sem_destroy(&msg_p[i].child_sem);
+        sem_destroy(&msg_p[i].parent_sem);
+    }
+    printf("Закрыты семафоры детей\n");
+    printf("Закрыты семафоры родителя\n");
+    if ((shmid = shm_open(mem_name, O_CREAT | O_RDWR, S_IRWXU)) == -1) {
+        if (shm_unlink(mem_name) == -1) {
+            perror("shm_unlink");
+            sysErr("server: error getting pointer to shared memory");
+        }
+    }
+    printf("Закрыта разделяемая память, переход к original handler\n");
+    prev(nsig);
+}
+
 int main(int argc, char **argv) {
-    char *mem_name = "shared-memory";
+    prev = signal(SIGINT, parentHandleCtrlC);
     int decoder[26];
     getDecoder(decoder, argv[1]);
     printf("Введите желаемое число процессов-декодеров, не более 10: \n");
-    int pros_num;
     scanf("%d", &pros_num);
 
-    int shmid;
-    message_t *msg_p;  // адрес сообщения в разделяемой памяти
     if ((shmid = shm_open(mem_name, O_CREAT | O_RDWR, S_IRWXU)) == -1) {
         perror("shm_open");
         sysErr("server: object is already open");
@@ -134,11 +147,12 @@ int main(int argc, char **argv) {
 
     for (int i = 0; i < pros_num; ++i) {
         if (fork() == 0) {
-            child(mem_name, decoder, i, pros_num);
+            signal(SIGINT, prev);
+            child(decoder, i);
             exit(0);
         }
     }
-    parent(msg_p, argv[2], argv[3], pros_num);
+    parent(argv[2], argv[3]);
 
     for (int i = 0; i < pros_num; ++i) {
         sem_destroy(&msg_p[i].child_sem);

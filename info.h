@@ -20,7 +20,7 @@ char *mem_name = "shared-memory";
 sem_t **parent_semaphores_pointer = NULL;
 sem_t **child_semaphores_pointer = NULL;
 int pros_num;
-int shmid;
+int shmid = -1;
 
 
 // структура сообщения, помещаемого в разделяемую память
@@ -34,6 +34,8 @@ typedef struct {
         int coded[MAX_INTS];
     };
 } message_t;
+
+message_t *msg_p = NULL;  // адрес сообщения в разделяемой памяти
 
 void sysErr(char *msg) {
     puts(msg);

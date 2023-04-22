@@ -8,7 +8,6 @@
 #include "../info.h"
 
 void child(int *decoder, sem_t *ch_sem, sem_t *pr_sem, int id) {
-    message_t *msg_p;  // адрес сообщения в разделяемой памяти
     if ((shmid = shm_open(mem_name, O_CREAT | O_RDWR, S_IRWXU)) == -1) {
         perror("shm_open");
         sysErr("client: object is already open");
@@ -46,7 +45,6 @@ void parent(char *input_file, char *output_file, sem_t **pr_sems, sem_t **ch_sem
     char decoded[100010];
     int ind_dec = 0;
 
-    message_t *msg_p;  // адрес сообщения в разделяемой памяти
     if ((shmid = shm_open(mem_name, O_CREAT | O_RDWR, S_IRWXU)) == -1) {
         perror("shm_open");
         sysErr("server: object is already open");
