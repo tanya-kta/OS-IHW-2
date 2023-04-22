@@ -15,6 +15,14 @@
 const char *child_sem = "/child-semaphore";
 const char *parent_sem = "/parent-semaphore";
 
+void (*prev)(int);
+char *mem_name = "shared-memory";
+sem_t **parent_semaphores_pointer = NULL;
+sem_t **child_semaphores_pointer = NULL;
+int pros_num;
+int shmid;
+
+
 // структура сообщения, помещаемого в разделяемую память
 typedef struct {
     int type;

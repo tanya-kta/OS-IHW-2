@@ -7,9 +7,7 @@
 #include <fcntl.h>
 #include "../info.h"
 
-void child(char *mem_name, int *decoder, sem_t *ch_sem, sem_t *pr_sem, int id, int pros_num) {
-    int shmid;
-
+void child(int *decoder, sem_t *ch_sem, sem_t *pr_sem, int id) {
     message_t *msg_p;  // адрес сообщения в разделяемой памяти
     if ((shmid = shm_open(mem_name, O_CREAT | O_RDWR, S_IRWXU)) == -1) {
         perror("shm_open");
@@ -44,14 +42,10 @@ void child(char *mem_name, int *decoder, sem_t *ch_sem, sem_t *pr_sem, int id, i
     sem_post(pr_sem);
 }
 
-void parent(char *mem_name, char *input_file, char *output_file,
-            int pros_num, sem_t **pr_sems, sem_t **ch_sems) {
+void parent(char *input_file, char *output_file, sem_t **pr_sems, sem_t **ch_sems) {
     char decoded[100010];
     int ind_dec = 0;
 
-    int file = open(input_file, O_RDONLY, S_IRWXU);
-
-    int shmid;
     message_t *msg_p;  // адрес сообщения в разделяемой памяти
     if ((shmid = shm_open(mem_name, O_CREAT | O_RDWR, S_IRWXU)) == -1) {
         perror("shm_open");
@@ -69,6 +63,7 @@ void parent(char *mem_name, char *input_file, char *output_file,
     // получить доступ к памяти
     msg_p = mmap(0, sizeof(message_t) * pros_num, PROT_WRITE | PROT_READ, MAP_SHARED, shmid, 0);
 
+    int file = open(input_file, O_RDONLY, S_IRWXU);
     int status = 1;
     while (status == 1) {
         int num_of_running = 0;
@@ -98,6 +93,7 @@ void parent(char *mem_name, char *input_file, char *output_file,
             printf("\n");
         }
     }
+    close(file);
 
     for (int i = 0; i < pros_num; ++i) {
         msg_p[i].type = MSG_TYPE_FINISH;
@@ -112,7 +108,6 @@ void parent(char *mem_name, char *input_file, char *output_file,
     decoded[ind_dec] = '\0';
     printf("%s\n", decoded);
 
-    close(file);
     file = open(output_file, O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU);
     write(file, decoded, sizeof(char) * ind_dec);
     close(file);
@@ -124,31 +119,61 @@ void parent(char *mem_name, char *input_file, char *output_file,
     }
 }
 
+void parentHandleCtrlC(int nsig){
+    printf("Receive signal %d, CTRL-C pressed\n", nsig);
+    for (int i = 0; child_semaphores_pointer != NULL && i < pros_num; ++i) {
+        sem_destroy(child_semaphores_pointer[i]);
+        if (sem_unlink(getChildSemaphoreName(i)) == -1) {
+            perror("sem_unlink");
+            sysErr("server: error getting pointer to semaphore");
+        }
+    }
+    printf("Закрыты семафоры детей\n");
+    for (int i = 0; parent_semaphores_pointer != NULL && i < pros_num; ++i) {
+        sem_destroy(parent_semaphores_pointer[i]);
+        if (sem_unlink(getParentSemaphoreName(i)) == -1) {
+            perror("sem_unlink");
+            sysErr("server: error getting pointer to semaphore");
+        }
+    }
+    printf("Закрыты семафоры родителя\n");
+    if ((shmid = shm_open(mem_name, O_CREAT | O_RDWR, S_IRWXU)) == -1) {
+        if (shm_unlink(mem_name) == -1) {
+            perror("shm_unlink");
+            sysErr("server: error getting pointer to shared memory");
+        }
+    }
+    printf("Закрыта разделяемая память, переход к original handler\n");
+    prev(nsig);
+}
+
 int main(int argc, char **argv) {
-    char *mem_name = "shared-memory";
+    prev = signal(SIGINT, parentHandleCtrlC);
     int decoder[26];
     getDecoder(decoder, argv[1]);
     printf("Введите желаемое число процессов-декодеров, не более 10: \n");
-    int pros_num;
     scanf("%d", &pros_num);
 
     sem_t *parent_semaphores[pros_num];
     for (int i = 0; i < pros_num; ++i) {
         parent_semaphores[i] = sem_open(getParentSemaphoreName(i), O_CREAT, 0666, 0);
     }
+    parent_semaphores_pointer = parent_semaphores;
     sem_t *child_semaphores[pros_num];
     for (int i = 0; i < pros_num; ++i) {
         child_semaphores[i] = sem_open(getChildSemaphoreName(i), O_CREAT, 0666, 0);
     }
+    child_semaphores_pointer = child_semaphores;
 
     for (int i = 0; i < pros_num; ++i) {
         if (fork() == 0) {
-            child(mem_name, decoder, child_semaphores[i], parent_semaphores[i], i, pros_num);
+            signal(SIGINT, prev);
+            child(decoder, child_semaphores[i], parent_semaphores[i], i);
             exit(0);
         }
     }
 
-    parent(mem_name, argv[2], argv[3], pros_num, parent_semaphores, child_semaphores);
+    parent(argv[2], argv[3], parent_semaphores, child_semaphores);
     for (int i = 0; i < pros_num; ++i) {
         if (sem_unlink(getChildSemaphoreName(i)) == -1) {
             perror("sem_unlink");
