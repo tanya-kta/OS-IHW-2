@@ -42,9 +42,6 @@ void child(int *decoder, sem_t *ch_sem, sem_t *pr_sem, int id) {
 }
 
 void parent(char *input_file, char *output_file, sem_t **pr_sems, sem_t **ch_sems) {
-    char decoded[100010];
-    int ind_dec = 0;
-
     if ((shmid = shm_open(mem_name, O_CREAT | O_RDWR, S_IRWXU)) == -1) {
         perror("shm_open");
         sysErr("server: object is already open");
@@ -61,14 +58,15 @@ void parent(char *input_file, char *output_file, sem_t **pr_sems, sem_t **ch_sem
     // получить доступ к памяти
     msg_p = mmap(0, sizeof(message_t) * pros_num, PROT_WRITE | PROT_READ, MAP_SHARED, shmid, 0);
 
-    int file = open(input_file, O_RDONLY, S_IRWXU);
+    int in_file = open(input_file, O_RDONLY, S_IRWXU);
+    int out_file = open(output_file, O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU);
     int status = 1;
     while (status == 1) {
         int num_of_running = 0;
         for (int i = 0; i < pros_num; ++i, ++num_of_running) {
             int size = 0;
             for (; size < MAX_INTS; ++size) {
-                status = readInt(file, &msg_p[i].coded[size]);
+                status = readInt(in_file, &msg_p[i].coded[size]);
                 if (status == -1) {
                     break;
                 }
@@ -84,14 +82,15 @@ void parent(char *input_file, char *output_file, sem_t **pr_sems, sem_t **ch_sem
         for (int i = 0; i < num_of_running; ++i) {
             sem_wait(pr_sems[i]);
             printf("parent from child id %d: ", i);
-            for (int j = 0; j < msg_p[i].size; ++j, ++ind_dec) {
-                decoded[ind_dec] = msg_p[i].uncoded[j];
-                printf("%c", decoded[ind_dec]);
+            for (int j = 0; j < msg_p[i].size; ++j) {
+                printf("%c", msg_p[i].uncoded[j]);
+                write(out_file, &msg_p[i].uncoded[j], 1);
             }
             printf("\n");
         }
     }
-    close(file);
+    close(in_file);
+    close(out_file);
 
     for (int i = 0; i < pros_num; ++i) {
         msg_p[i].type = MSG_TYPE_FINISH;
@@ -102,13 +101,6 @@ void parent(char *input_file, char *output_file, sem_t **pr_sems, sem_t **ch_sem
         sem_close(pr_sems[i]);
         sem_close(ch_sems[i]);
     }
-
-    decoded[ind_dec] = '\0';
-    printf("%s\n", decoded);
-
-    file = open(output_file, O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU);
-    write(file, decoded, sizeof(char) * ind_dec);
-    close(file);
 
     close(shmid);
     if (shm_unlink(mem_name) == -1) {

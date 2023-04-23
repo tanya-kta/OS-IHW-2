@@ -53,7 +53,8 @@ void parent(char *input_file, char *output_file) {
     char decoded[100010];
     int ind_dec = 0;
 
-    int file = open(input_file, O_RDONLY, S_IRWXU);
+    int in_file = open(input_file, O_RDONLY, S_IRWXU);
+    int out_file = open(output_file, O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU);
 
     struct sembuf child_poster = { 0, 1, 0 };
     struct sembuf parent_waiter = { 0, -1, 0 };
@@ -64,7 +65,7 @@ void parent(char *input_file, char *output_file) {
         for (int i = 0; i < pros_num; ++i, ++num_of_running) {
             int size = 0;
             for (; size < MAX_INTS; ++size) {
-                status = readInt(file, &msg_p[i].coded[size]);
+                status = readInt(in_file, &msg_p[i].coded[size]);
                 if (status == -1) {
                     break;
                 }
@@ -84,13 +85,15 @@ void parent(char *input_file, char *output_file) {
             semop(semid, &parent_waiter, 1);
 
             printf("parent from child id %d: ", i);
-            for (int j = 0; j < msg_p[i].size; ++j, ++ind_dec) {
-                decoded[ind_dec] = msg_p[i].uncoded[j];
-                printf("%c", decoded[ind_dec]);
+            for (int j = 0; j < msg_p[i].size; ++j) {
+                printf("%c", msg_p[i].uncoded[j]);
+                write(out_file, &msg_p[i].uncoded[j], 1);
             }
             printf("\n");
         }
     }
+    close(in_file);
+    close(out_file);
 
     for (int i = 0; i < pros_num; ++i) {
         msg_p[i].type = MSG_TYPE_FINISH;
@@ -101,14 +104,6 @@ void parent(char *input_file, char *output_file) {
         parent_waiter.sem_num = i + pros_num;
         semop(semid, &parent_waiter, 1);
     }
-
-    decoded[ind_dec] = '\0';
-    printf("%s\n", decoded);
-
-    close(file);
-    file = open(output_file, O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU);
-    write(file, decoded, sizeof(char) * ind_dec);
-    close(file);
     //while (1);
 }
 

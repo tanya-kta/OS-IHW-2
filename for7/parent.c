@@ -55,9 +55,6 @@ int main(int argc, char **argv) {
     }
     child_semaphores_pointer = child_semaphores;
 
-    char decoded[100010];
-    int ind_dec = 0;
-
     if ((shmid = shm_open(mem_name, O_CREAT | O_RDWR, S_IRWXU)) == -1) {
         perror("shm_open");
         sysErr("server: object is already open");
@@ -74,14 +71,15 @@ int main(int argc, char **argv) {
     // получить доступ к памяти
     msg_p = mmap(0, sizeof(message_t) * pros_num, PROT_WRITE | PROT_READ, MAP_SHARED, shmid, 0);
 
-    int file = open(argv[1], O_RDONLY, S_IRWXU);
+    int in_file = open(argv[1], O_RDONLY, S_IRWXU);
+    int out_file = open(argv[2], O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU);
     int status = 1;
     while (status == 1) {
         int num_of_running = 0;
         for (int i = 0; i < pros_num; ++i, ++num_of_running) {
             int size = 0;
             for (; size < MAX_INTS; ++size) {
-                status = readInt(file, &msg_p[i].coded[size]);
+                status = readInt(in_file, &msg_p[i].coded[size]);
                 if (status == -1) {
                     break;
                 }
@@ -97,14 +95,15 @@ int main(int argc, char **argv) {
         for (int i = 0; i < num_of_running; ++i) {
             sem_wait(parent_semaphores[i]);
             printf("parent from child id %d: ", i);
-            for (int j = 0; j < msg_p[i].size; ++j, ++ind_dec) {
-                decoded[ind_dec] = msg_p[i].uncoded[j];
-                printf("%c", decoded[ind_dec]);
+            for (int j = 0; j < msg_p[i].size; ++j) {
+                printf("%c", msg_p[i].uncoded[j]);
+                write(out_file, &msg_p[i].uncoded[j], 1);
             }
             printf("\n");
         }
     }
-    close(file);
+    close(in_file);
+    close(out_file);
 
     for (int i = 0; i < pros_num; ++i) {
         msg_p[i].type = MSG_TYPE_FINISH;
@@ -115,13 +114,6 @@ int main(int argc, char **argv) {
         sem_close(child_semaphores[i]);
         sem_close(parent_semaphores[i]);
     }
-
-    decoded[ind_dec] = '\0';
-    printf("%s\n", decoded);
-
-    file = open(argv[2], O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU);
-    write(file, decoded, sizeof(char) * ind_dec);
-    close(file);
 
     close(shmid);
     if (shm_unlink(mem_name) == -1) {
