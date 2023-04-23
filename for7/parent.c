@@ -36,13 +36,13 @@ void parentHandleCtrlC(int nsig){
 }
 
 int main(int argc, char **argv) {
-    if (argc != 5) {
+    if (argc != 4) {
         printf("Неверный запуск\n");
         exit(1);
     }
     prev = signal(SIGINT, parentHandleCtrlC);
 
-    pros_num = atoi(argv[4]);
+    pros_num = atoi(argv[3]);
 
     sem_t *parent_semaphores[pros_num];
     for (int i = 0; i < pros_num; ++i) {
@@ -91,11 +91,11 @@ int main(int argc, char **argv) {
             }
             msg_p[i].size = size;
             msg_p[i].type = MSG_TYPE_INT;
-            sem_post(ch_sems[i]);
+            sem_post(child_semaphores[i]);
         }
 
         for (int i = 0; i < num_of_running; ++i) {
-            sem_wait(pr_sems[i]);
+            sem_wait(parent_semaphores[i]);
             printf("parent from child id %d: ", i);
             for (int j = 0; j < msg_p[i].size; ++j, ++ind_dec) {
                 decoded[ind_dec] = msg_p[i].uncoded[j];
@@ -108,18 +108,18 @@ int main(int argc, char **argv) {
 
     for (int i = 0; i < pros_num; ++i) {
         msg_p[i].type = MSG_TYPE_FINISH;
-        sem_post(ch_sems[i]);
+        sem_post(child_semaphores[i]);
     }
     for (int i = 0; i < pros_num; ++i) {
-        sem_wait(pr_sems[i]);
-        sem_close(pr_sems[i]);
-        sem_close(ch_sems[i]);
+        sem_wait(parent_semaphores[i]);
+        sem_close(child_semaphores[i]);
+        sem_close(parent_semaphores[i]);
     }
 
     decoded[ind_dec] = '\0';
     printf("%s\n", decoded);
 
-    file = open(argv[3], O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU);
+    file = open(argv[2], O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU);
     write(file, decoded, sizeof(char) * ind_dec);
     close(file);
 
@@ -139,5 +139,8 @@ int main(int argc, char **argv) {
             sysErr("server: error getting pointer to semaphore");
         }
     }
+
+    sem_t *last_sem = sem_open(last_semaphore, O_CREAT, 0666, 0);
+    sem_post(last_sem);
     return 0;
 }

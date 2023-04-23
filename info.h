@@ -13,6 +13,7 @@
 
 const char *child_sem = "/child-semaphore";
 const char *parent_sem = "/parent-semaphore";
+const char *last_semaphore = "/last-semaphore";
 
 void (*prev)(int);
 char *mem_name = "my memory to share";

@@ -14,6 +14,12 @@ void child(int *decoder, int id) {
     } else {
         printf("Object in child id %d is open: name = %s, id = 0x%x\n", id, mem_name, shmid);
     }
+    if (ftruncate(shmid, sizeof(message_t) * pros_num) == -1) {
+        perror("ftruncate");
+        sysErr("server: memory sizing error");
+    } else {
+        printf("Memory size set and = %lu\n", sizeof(message_t) * pros_num);
+    }
     // получить доступ к памяти
     msg_p = mmap(0, sizeof(message_t) * pros_num, PROT_WRITE | PROT_READ, MAP_SHARED, shmid, 0);
 
@@ -56,6 +62,8 @@ int main(int argc, char **argv) {
             exit(0);
         }
     }
-
+    sem_t *last_sem = sem_open(last_semaphore, O_CREAT, 0666, 0);
+    sem_wait(last_sem);
+    sem_unlink(last_semaphore);
     return 0;
 }
