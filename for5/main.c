@@ -17,7 +17,7 @@ void child(int *decoder, int id) {
     // получить доступ к памяти
     msg_p = mmap(0, sizeof(message_t) * pros_num, PROT_WRITE | PROT_READ, MAP_SHARED, shmid, 0);
 
-    char buffer[30];
+    char buffer[MAX_INTS];
 
     while (1) {
         sem_wait(&msg_p[id].child_sem);

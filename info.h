@@ -21,6 +21,10 @@ sem_t **parent_semaphores_pointer = NULL;
 sem_t **child_semaphores_pointer = NULL;
 int pros_num;
 int shmid = -1;
+char pathname[]="main.c";
+key_t shm_key;
+int semid = -1;
+
 
 
 // структура сообщения, помещаемого в разделяемую память
