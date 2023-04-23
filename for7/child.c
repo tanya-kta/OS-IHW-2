@@ -23,8 +23,12 @@ void child(int *decoder, int id) {
     // получить доступ к памяти
     msg_p = mmap(0, sizeof(message_t) * pros_num, PROT_WRITE | PROT_READ, MAP_SHARED, shmid, 0);
 
-    sem_t *pr_sem = sem_open(getParentSemaphoreName(id), O_CREAT, 0666, 0);
-    sem_t *ch_sem = sem_open(getChildSemaphoreName(id), O_CREAT, 0666, 0);
+    char *name = getChildSemaphoreName(id);
+    sem_t *ch_sem = sem_open(name, O_CREAT, 0666, 0);
+    free(name);
+    name = getParentSemaphoreName(id);
+    sem_t *pr_sem = sem_open(name, O_CREAT, 0666, 0);
+    free(name);
 
     char buffer[MAX_INTS];
 

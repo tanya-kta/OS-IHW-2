@@ -89,16 +89,20 @@ int readInt(int file, int *p) {
 
 char *getChildSemaphoreName(int index) {
     char digit = '0' + index;
-    char total[strlen(child_sem) + 2];
+    char *total = malloc(strlen(child_sem) + 2);
     total[0] = '\0';
     strcat(total, child_sem);
-    return strcat(total, &digit);
+    total[strlen(child_sem)] = digit;
+    total[strlen(child_sem) + 1] = '\0';
+    return total;
 }
 
 char *getParentSemaphoreName(int index) {
     char digit = '0' + index;
-    char total[strlen(parent_sem) + 2];
+    char *total = malloc(strlen(parent_sem) + 2);
     total[0] = '\0';
     strcat(total, parent_sem);
-    return strcat(total, &digit);
+    total[strlen(parent_sem)] = digit;
+    total[strlen(parent_sem) + 1] = '\0';
+    return total;
 }

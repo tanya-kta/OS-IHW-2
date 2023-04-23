@@ -11,18 +11,22 @@ void parentHandleCtrlC(int nsig){
     printf("Receive signal %d, CTRL-C pressed\n", nsig);
     for (int i = 0; child_semaphores_pointer != NULL && i < pros_num; ++i) {
         sem_destroy(child_semaphores_pointer[i]);
-        if (sem_unlink(getChildSemaphoreName(i)) == -1) {
+        char *name = getChildSemaphoreName(i);
+        if (sem_unlink(name) == -1) {
             perror("sem_unlink");
             sysErr("server: error getting pointer to semaphore");
         }
+        free(name);
     }
     printf("Закрыты семафоры детей\n");
     for (int i = 0; parent_semaphores_pointer != NULL && i < pros_num; ++i) {
         sem_destroy(parent_semaphores_pointer[i]);
-        if (sem_unlink(getParentSemaphoreName(i)) == -1) {
+        char *name = getParentSemaphoreName(i);
+        if (sem_unlink(name) == -1) {
             perror("sem_unlink");
             sysErr("server: error getting pointer to semaphore");
         }
+        free(name);
     }
     printf("Закрыты семафоры родителя\n");
     if ((shmid = shm_open(mem_name, O_CREAT | O_RDWR, S_IRWXU)) == -1) {
@@ -46,12 +50,16 @@ int main(int argc, char **argv) {
 
     sem_t *parent_semaphores[pros_num];
     for (int i = 0; i < pros_num; ++i) {
-        parent_semaphores[i] = sem_open(getParentSemaphoreName(i), O_CREAT, 0666, 0);
+        char *name = getParentSemaphoreName(i);
+        parent_semaphores[i] = sem_open(name, O_CREAT, 0666, 0);
+        free(name);
     }
     parent_semaphores_pointer = parent_semaphores;
     sem_t *child_semaphores[pros_num];
     for (int i = 0; i < pros_num; ++i) {
-        child_semaphores[i] = sem_open(getChildSemaphoreName(i), O_CREAT, 0666, 0);
+        char *name = getChildSemaphoreName(i);
+        child_semaphores[i] = sem_open(name, O_CREAT, 0666, 0);
+        free(name);
     }
     child_semaphores_pointer = child_semaphores;
 
@@ -122,14 +130,18 @@ int main(int argc, char **argv) {
     }
 
     for (int i = 0; i < pros_num; ++i) {
-        if (sem_unlink(getChildSemaphoreName(i)) == -1) {
+        char *name = getChildSemaphoreName(i);
+        if (sem_unlink(name) == -1) {
             perror("sem_unlink");
             sysErr("server: error getting pointer to semaphore");
         }
-        if (sem_unlink(getParentSemaphoreName(i)) == -1) {
+        free(name);
+        name = getParentSemaphoreName(i);
+        if (sem_unlink(name) == -1) {
             perror("sem_unlink");
             sysErr("server: error getting pointer to semaphore");
         }
+        free(name);
     }
 
     sem_t *last_sem = sem_open(last_semaphore, O_CREAT, 0666, 0);
