@@ -3,6 +3,8 @@
 .clang-tidy
 .clang-format
 */run
+*/r1
+*/r2
 CMakeLists.txt
 
 # Prerequisites
