@@ -50,9 +50,6 @@ void child(int *decoder, int id) {
 }
 
 void parent(char *input_file, char *output_file) {
-    char decoded[100010];
-    int ind_dec = 0;
-
     int in_file = open(input_file, O_RDONLY, S_IRWXU);
     int out_file = open(output_file, O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU);
 
