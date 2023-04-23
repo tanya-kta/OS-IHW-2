@@ -22,6 +22,7 @@ sem_t **child_semaphores_pointer = NULL;
 int pros_num;
 int shmid = -1;
 char pathname[]="main.c";
+char pathname_for_two[]="child.c";
 key_t shm_key;
 int semid = -1;
 

@@ -29,7 +29,7 @@ void parentHandleCtrlC(int nsig){
         free(name);
     }
     printf("Закрыты семафоры родителя\n");
-    if ((shmid = shm_open(mem_name, O_CREAT | O_RDWR, S_IRWXU)) == -1) {
+    if (shmid != -1) {
         if (shm_unlink(mem_name) == -1) {
             perror("shm_unlink");
             sysErr("server: error getting pointer to shared memory");

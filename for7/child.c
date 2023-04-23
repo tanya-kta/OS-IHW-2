@@ -54,14 +54,47 @@ void child(int *decoder, int id) {
     sem_post(pr_sem);
 }
 
+void childHandleCtrlC(int nsig){
+    printf("Receive signal %d, CTRL-C pressed\n", nsig);
+    for (int i = 0; i < pros_num; ++i) {
+        char *name = getChildSemaphoreName(i);
+        sem_open(name, O_CREAT, 0666, 0);
+        if (sem_unlink(name) == -1) {
+            perror("sem_unlink");
+            sysErr("server: error getting pointer to semaphore");
+        }
+        free(name);
+    }
+    printf("Закрыты семафоры детей\n");
+    for (int i = 0; i < pros_num; ++i) {
+        char *name = getParentSemaphoreName(i);
+        sem_open(name, O_CREAT, 0666, 0);
+        if (sem_unlink(name) == -1) {
+            perror("sem_unlink");
+            sysErr("server: error getting pointer to semaphore");
+        }
+        free(name);
+    }
+    printf("Закрыты семафоры родителя\n");
+    if (shmid != -1) {
+        if (shm_unlink(mem_name) == -1) {
+            perror("shm_unlink");
+            sysErr("server: error getting pointer to shared memory");
+        }
+    }
+    printf("Закрыта разделяемая память\n");
+    exit(0);
+}
 
 int main(int argc, char **argv) {
     int decoder[26];
     getDecoder(decoder, argv[1]);
     pros_num = atoi(argv[2]);
+    prev = signal(SIGINT, childHandleCtrlC);
 
     for (int i = 0; i < pros_num; ++i) {
         if (fork() == 0) {
+            signal(SIGINT, prev);
             child(decoder, i);
             exit(0);
         }

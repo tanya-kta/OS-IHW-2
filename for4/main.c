@@ -109,7 +109,7 @@ void parent(char *input_file, char *output_file, sem_t **pr_sems, sem_t **ch_sem
     }
 }
 
-void parentHandleCtrlC(int nsig){
+void childHandleCtrlC(int nsig){
     printf("Receive signal %d, CTRL-C pressed\n", nsig);
     for (int i = 0; child_semaphores_pointer != NULL && i < pros_num; ++i) {
         sem_destroy(child_semaphores_pointer[i]);
@@ -131,7 +131,7 @@ void parentHandleCtrlC(int nsig){
         free(name);
     }
     printf("Закрыты семафоры родителя\n");
-    if ((shmid = shm_open(mem_name, O_CREAT | O_RDWR, S_IRWXU)) == -1) {
+    if (shmid != -1) {
         if (shm_unlink(mem_name) == -1) {
             perror("shm_unlink");
             sysErr("server: error getting pointer to shared memory");
@@ -146,7 +146,7 @@ int main(int argc, char **argv) {
         printf("Неверный запуск\n");
         exit(1);
     }
-    prev = signal(SIGINT, parentHandleCtrlC);
+    prev = signal(SIGINT, childHandleCtrlC);
     int decoder[26];
     getDecoder(decoder, argv[1]);
     pros_num = atoi(argv[4]);
