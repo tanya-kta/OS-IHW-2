@@ -114,11 +114,14 @@ void parentHandleCtrlC(int nsig){
 }
 
 int main(int argc, char **argv) {
+    if (argc != 5) {
+        printf("Неверный запуск\n");
+        exit(1);
+    }
     prev = signal(SIGINT, parentHandleCtrlC);
     int decoder[26];
     getDecoder(decoder, argv[1]);
-    printf("Введите желаемое число процессов-декодеров, не более 10: \n");
-    scanf("%d", &pros_num);
+    pros_num = atoi(argv[4]);
 
     if ((shmid = shm_open(mem_name, O_CREAT | O_RDWR, S_IRWXU)) == -1) {
         perror("shm_open");

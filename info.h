@@ -1,4 +1,3 @@
-// message.h
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
@@ -24,8 +23,6 @@ int shmid = -1;
 char pathname[]="main.c";
 key_t shm_key;
 int semid = -1;
-
-
 
 // структура сообщения, помещаемого в разделяемую память
 typedef struct {

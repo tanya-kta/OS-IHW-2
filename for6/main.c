@@ -109,6 +109,7 @@ void parent(char *input_file, char *output_file) {
     file = open(output_file, O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU);
     write(file, decoded, sizeof(char) * ind_dec);
     close(file);
+    //while (1);
 }
 
 void parentHandleCtrlC(int nsig){
@@ -126,15 +127,18 @@ void parentHandleCtrlC(int nsig){
         shmctl(shmid, IPC_RMID, NULL);
     }
     printf("Закрыта разделяемая память, переход к original handler\n");
-    prev(nsig);
+    exit(0);
 }
 
 int main(int argc, char **argv) {
+    if (argc != 5) {
+        printf("Неверный запуск\n");
+        exit(1);
+    }
     prev = signal(SIGINT, parentHandleCtrlC);
     int decoder[26];
     getDecoder(decoder, argv[1]);
-    printf("Введите желаемое число процессов-декодеров, не более 10: \n");
-    scanf("%d", &pros_num);
+    pros_num = atoi(argv[4]);
 
     shm_key = ftok(pathname, 0);
     if((shmid = shmget(shm_key, sizeof(message_t) * pros_num,
